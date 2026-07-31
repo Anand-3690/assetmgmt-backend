@@ -27,8 +27,9 @@ SECRET_KEY = 'django-insecure-x_kwzg4x_h75$12fs!^%i!fzk&0td_l6mkwfx$g2+*e4^l)q#1
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
-
+ALLOWED_HOSTS = ['asset.sevak.live', 'localhost', '192.168.201.237']
+CSRF_TRUSTED_ORIGINS = ['https://asset.sevak.live']
+CORS_ALLOWED_ORIGINS = ['https://asset.sevak.live']
 
 # Application definition
 
@@ -59,7 +60,7 @@ SIMPLE_JWT = {
 AWS_ACCESS_KEY_ID = config('RUSTFS_ACCESS_KEY', default='')
 AWS_SECRET_ACCESS_KEY = config('RUSTFS_SECRET_KEY', default='')
 AWS_STORAGE_BUCKET_NAME = config('RUSTFS_BUCKET_NAME', default='asset-documents')
-AWS_S3_ENDPOINT_URL = config('RUSTFS_ENDPOINT_URL', default='http://localhost:9000')
+AWS_S3_ENDPOINT_URL = config('RUSTFS_ENDPOINT_URL', default='https://storage.sevak.live')
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = None
 AWS_QUERYSTRING_AUTH = True

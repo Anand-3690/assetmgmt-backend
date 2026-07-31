@@ -1,11 +1,12 @@
 # loans/views.py
-from xml.dom import ValidationErr
 
+from rest_framework.exceptions import ValidationError
 from django.db.models import Q
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db import models as db_models
 
 from accounts.permissions import IsDeptAdminOrOrgAdmin
 from .models import AssetLoan
@@ -26,9 +27,6 @@ class AssetLoanViewSet(viewsets.ModelViewSet):
         )
 
     def perform_create(self, serializer):
-        asset = serializer.validated_data['asset']
-        if asset.loans.filter(status='active').exists():
-            raise ValidationErr('This asset is already on an active loan.')
         serializer.save(sent_by=self.request.user)
 
     # loans/views.py
@@ -48,3 +46,8 @@ class AssetLoanViewSet(viewsets.ModelViewSet):
             'sent': AssetLoanSerializer(qs.filter(asset__owning_department=dept), many=True).data,
             'received': AssetLoanSerializer(qs.filter(to_department=dept), many=True).data,
         })
+
+    @action(detail=False)
+    def history(self, request):
+        qs = self.get_queryset().exclude(status='active').order_by('-sent_date')
+        return Response(AssetLoanSerializer(qs, many=True).data)

@@ -33,6 +33,9 @@ class Asset(models.Model):
         ('unknown', 'Unknown'),
     ]
 
+    quantity = models.PositiveIntegerField(default=1)
+    unit = models.CharField(max_length=20, blank=True)  # "pcs", "kg", "" for single items
+
     objects = DepartmentScopedQuerySet.as_manager()
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -115,6 +118,7 @@ class AssetEvent(models.Model):
         ('status_changed', 'Status Changed'),
         ('retired', 'Retired'),
         ('flagged_missing', 'Flagged Missing'),
+        ('quantity_adjusted', 'Quantity Adjusted'),
     ]
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE, related_name='events')
     event_type = models.CharField(max_length=30, choices=EVENT_CHOICES)

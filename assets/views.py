@@ -6,12 +6,53 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.exceptions import PermissionDenied
 from .serializers import AssetSerializer, AssetCreateSerializer
-from accounts.permissions import IsDeptAdminOrOrgAdmin, IsSameDepartmentObject
+from accounts.permissions import IsDeptAdminOrOrgAdmin, IsOrgAdmin, IsSameDepartmentObject
 from .models import Asset, AssetCategory, AssetEvent
 from .serializers import AssetSerializer, AssetCategorySerializer
 from .querysets import DepartmentScopedViewSetMixin
 from .models import AssetDocument
 from .serializers import AssetDocumentSerializer
+from .models import AssetSpec
+from .serializers import AssetSpecSerializer
+
+class AssetCategoryViewSet(viewsets.ModelViewSet):
+    queryset = AssetCategory.objects.all()
+    serializer_class = AssetCategorySerializer
+
+    def get_permissions(self):
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [IsAuthenticated(), IsOrgAdmin()]
+        return [IsAuthenticated()]
+
+class AssetSpecViewSet(viewsets.ModelViewSet):
+    queryset = AssetSpec.objects.all()
+    serializer_class = AssetSpecSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'org_admin':
+            return AssetSpec.objects.all()
+        return AssetSpec.objects.filter(asset__owning_department=user.department)
+
+    def get_permissions(self):
+        if self.action in ('create', 'destroy', 'update', 'partial_update'):
+            return [IsAuthenticated(), IsDeptAdminOrOrgAdmin()]
+        return [IsAuthenticated()]
+
+    def _check_department(self, asset):
+        user = self.request.user
+        if user.role != 'org_admin' and asset.owning_department_id != user.department_id:
+            raise PermissionDenied("Cannot manage specs for another department's asset.")
+
+    def perform_create(self, serializer):
+        asset = serializer.validated_data['asset']
+        self._check_department(asset)
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        self._check_department(instance.asset)
+        instance.delete()
 
 class AssetDocumentViewSet(viewsets.ModelViewSet):
     queryset = AssetDocument.objects.all()
@@ -80,5 +121,20 @@ class AssetViewSet(DepartmentScopedViewSetMixin, viewsets.ModelViewSet):
         AssetEvent.objects.create(
             asset=asset, event_type='flagged_missing',
             performed_by=request.user, note=request.data.get('note', ''),
+        )
+        return Response(AssetSerializer(asset).data)
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated, IsSameDepartmentObject])
+    def adjust_quantity(self, request, pk=None):
+        asset = self.get_object()
+        new_quantity = request.data.get('quantity')
+        if new_quantity is None or int(new_quantity) < 0:
+            raise ValidationError('Valid quantity required.')
+        old_quantity = asset.quantity
+        asset.quantity = int(new_quantity)
+        asset.save(update_fields=['quantity'])
+        AssetEvent.objects.create(
+            asset=asset, event_type='quantity_adjusted', performed_by=request.user,
+            note=f"{old_quantity} \u2192 {new_quantity}. {request.data.get('note', '')}".strip(),
         )
         return Response(AssetSerializer(asset).data)

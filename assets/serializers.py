@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import AssetCategory, Asset, AssetSpec, AssetDocument, AssetEvent
+from django.db import models as db_models
 
 
 class AssetCategorySerializer(serializers.ModelSerializer):
@@ -43,22 +44,42 @@ class AssetSerializer(serializers.ModelSerializer):
     documents = AssetDocumentSerializer(many=True, read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     owning_department_name = serializers.CharField(source='owning_department.name', read_only=True)
-    active_loan = serializers.SerializerMethodField()
+
+    available_quantity = serializers.SerializerMethodField()
+    active_loans = serializers.SerializerMethodField()
+    loan_history = serializers.SerializerMethodField()
+
+    def get_loan_history(self, obj):
+        loans = obj.loans.exclude(status='active').order_by('-sent_date')
+        return [
+            {'id': l.id, 'to_department_name': l.to_department.name, 'quantity': l.quantity,
+            'sent_date': l.sent_date, 'expected_return': l.expected_return,
+            'actual_return': l.actual_return, 'status': l.status}
+            for l in loans
+        ]
+
+    def get_available_quantity(self, obj):
+        loaned = obj.loans.filter(status='active').aggregate(total=db_models.Sum('quantity'))['total'] or 0
+        return obj.quantity - loaned
+
+    def get_active_loans(self, obj):
+        loans = obj.loans.filter(status='active')
+        return [
+            {'id': l.id, 'to_department_name': l.to_department.name,
+             'quantity': l.quantity, 'expected_return': l.expected_return}
+            for l in loans
+        ]
 
     class Meta:
         model = Asset
         fields = '__all__'
         read_only_fields = ['id', 'asset_tag', 'owning_department', 'created_at', 'updated_at']
 
-    def get_active_loan(self, obj):
-        loan = obj.loans.filter(status='active').first()
-        if not loan:
-            return None
-        return {
-            'id': loan.id,
-            'to_department_name': loan.to_department.name,
-            'expected_return': loan.expected_return,
-        }
+
+class AssetSpecSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AssetSpec
+        fields = ['id', 'asset', 'key', 'value']
 
 class AssetCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -66,6 +87,6 @@ class AssetCreateSerializer(serializers.ModelSerializer):
         fields = ['id', 'asset_tag', 'name', 'category', 'owning_department', 'acquisition_type',
                   'condition_on_receipt', 'donor_name', 'vendor', 'purchase_date',
                   'cost', 'warranty_expiry', 'amc_expiry', 'amc_vendor_contact',
-                  'current_location', 'notes']
+                  'current_location', 'notes','quantity', 'unit']
         read_only_fields = ['id', 'asset_tag']
         extra_kwargs = {'owning_department': {'required': False}}

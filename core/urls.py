@@ -24,6 +24,7 @@ from assets.views import AssetViewSet, AssetCategoryViewSet
 from loans.views import AssetLoanViewSet
 from accounts.views import me
 from campuses.views import DepartmentViewSet
+from assets.views import AssetSpecViewSet
 
 router = DefaultRouter()
 router.register('assets', AssetViewSet, basename='asset')
@@ -31,6 +32,7 @@ router.register('asset-categories', AssetCategoryViewSet, basename='assetcategor
 router.register('loans', AssetLoanViewSet, basename='assetloan')
 router.register('departments', DepartmentViewSet, basename='department')
 router.register('asset-documents', AssetDocumentViewSet, basename='assetdocument')
+router.register('asset-specs', AssetSpecViewSet, basename='assetspec')
 
 urlpatterns = [
     path('admin/', admin.site.urls),

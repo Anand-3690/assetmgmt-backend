@@ -15,3 +15,4 @@ class AssetLoan(models.Model):
     actual_return = models.DateField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     sent_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    quantity = models.PositiveIntegerField(default=1)
