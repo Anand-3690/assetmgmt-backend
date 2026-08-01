@@ -25,6 +25,7 @@ from loans.views import AssetLoanViewSet
 from accounts.views import me
 from campuses.views import DepartmentViewSet
 from assets.views import AssetSpecViewSet
+from accounts.views import me, change_password
 
 router = DefaultRouter()
 router.register('assets', AssetViewSet, basename='asset')
@@ -41,4 +42,5 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('', include('scan.urls')),
     path('api/me/', me, name='me'),
+    path('api/change-password/', change_password, name='change_password'),
 ]

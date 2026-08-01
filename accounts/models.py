@@ -16,3 +16,5 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    must_change_password = models.BooleanField(default=True)

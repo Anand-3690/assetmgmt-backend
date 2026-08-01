@@ -7,4 +7,4 @@ class MeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'role', 'department', 'department_name']
+        fields = ['id', 'username', 'role', 'department', 'department_name', 'must_change_password']
